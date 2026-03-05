@@ -330,7 +330,7 @@
             <th>容量</th>
             <th>最安値</th>
             <th>円/g</th>
-            <th>評価</th>
+            <th>全体比</th>
             <th></th>
           </tr>
         </thead>
@@ -513,11 +513,15 @@ function renderMain() {
           .reduce((min, pr) => pr.price_yen < min ? pr.price_yen : min, Infinity)
       : null;
 
-    const badge = best !== null
-      ? (isBest
-          ? '<span class="badge badge-green">最安</span>'
-          : '')
-      : '<span class="badge badge-gray">未記録</span>';
+    let badge;
+    if (best === null) {
+      badge = '<span class="badge badge-gray">未記録</span>';
+    } else if (isBest) {
+      badge = '<span class="badge badge-green">★ 最安</span>';
+    } else {
+      const pct = ((best / globalBest - 1) * 100).toFixed(0);
+      badge = `<span class="badge badge-yellow">+${pct}%</span>`;
+    }
 
     const isCustom = String(p.id).startsWith('c');
     return `<tr class="${isBest ? 'best-row' : ''}">
@@ -544,6 +548,8 @@ function renderCheckScreen() {
   document.getElementById('check-result').style.display = 'none';
   document.getElementById('input-price').value = '';
   document.getElementById('input-store').value = '';
+  const existingCross = document.getElementById('cross-result');
+  if (existingCross) existingCross.remove();
 
   const grid = document.getElementById('product-grid');
   grid.innerHTML = allProducts().map(p =>
@@ -602,23 +608,45 @@ function checkPrice() {
     }
   }
 
-  let crossNote = '';
+  let crossHTML = '';
   if (globalBestCpg !== null) {
     const crossRatio = cpg / globalBestCpg;
+    const crossPct = ((crossRatio - 1) * 100).toFixed(1);
+    let crossCls, crossLabel, crossDetail;
     if (crossRatio <= 1.05) {
-      crossNote = '<br><small>全製品中でも最安水準です</small>';
+      crossCls = 'cheap'; crossLabel = '全製品中でも最安水準';
+      crossDetail = `全体最安 ${globalBestCpg.toFixed(2)}円/g とほぼ同じ`;
+    } else if (crossRatio <= 1.15) {
+      crossCls = 'normal'; crossLabel = `全体比 +${crossPct}%`;
+      crossDetail = `全体最安 ${globalBestCpg.toFixed(2)}円/g よりやや高め`;
     } else {
-      crossNote = `<br><small>全製品最安 ${globalBestCpg.toFixed(2)}円/g 比 ${((crossRatio - 1) * 100).toFixed(1)}% 高め</small>`;
+      crossCls = 'expensive'; crossLabel = `全体比 +${crossPct}%`;
+      crossDetail = `全体最安 ${globalBestCpg.toFixed(2)}円/g より割高`;
     }
+    crossHTML = `<div class="result-box ${crossCls}" style="margin-top:10px;padding:12px;">
+      <div style="font-size:13px;font-weight:bold;color:#718096;margin-bottom:4px;">全製品横断</div>
+      <div class="result-label" style="font-size:18px;">${crossLabel}</div>
+      <div class="result-detail">${crossDetail}</div>
+    </div>`;
   }
 
   const box = document.getElementById('result-box');
   box.className = 'result-box ' + cls;
   box.innerHTML = `
+    <div style="font-size:13px;font-weight:bold;color:#718096;margin-bottom:4px;">同製品の過去記録と比較</div>
     <div class="result-label">${label}</div>
     <div class="result-cpg">${cpg.toFixed(2)} 円/g</div>
-    <div class="result-detail">${detail}${crossNote}</div>
+    <div class="result-detail">${detail}</div>
   `;
+  // Insert cross-product box after result-box
+  const existingCross = document.getElementById('cross-result');
+  if (existingCross) existingCross.remove();
+  if (crossHTML) {
+    const div = document.createElement('div');
+    div.id = 'cross-result';
+    div.innerHTML = crossHTML;
+    document.getElementById('result-box').insertAdjacentElement('afterend', div);
+  }
 
   pendingCheckData = { product_id: selectedProductId, price_yen: price, store, cpg };
   document.getElementById('check-result').style.display = 'block';
