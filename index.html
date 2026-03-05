@@ -452,7 +452,7 @@ function renderCheckScreen() {
 
   const grid = document.getElementById('product-grid');
   grid.innerHTML = allProducts().map(p =>
-    `<button class="product-btn" id="pbtn-${p.id}" onclick="selectProduct(${p.id})">
+    `<button class="product-btn" id="pbtn-${p.id}" onclick="selectProduct('${p.id}')">
       <span class="name">${p.name}</span>
       <span class="size">${p.size_g}g</span>
     </button>`
