@@ -287,6 +287,18 @@
       color: #2d3748;
       margin-bottom: 14px;
     }
+    .modal-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+      margin-bottom: 12px;
+    }
+    .modal-input:focus { border-color: #2b6cb0; }
+    .modal-btn-row { display: flex; gap: 8px; }
+    .modal-btn-row .btn { margin-top: 0; }
   </style>
 </head>
 <body>
@@ -393,6 +405,18 @@
   </div>
 </div>
 
+<!-- ==================== MODAL: 製品名変更 ==================== -->
+<div id="rename-overlay" class="modal-overlay" onclick="handleRenameOverlayClick(event)">
+  <div class="modal-box">
+    <div class="modal-title">製品名を変更</div>
+    <input type="text" id="rename-input" class="modal-input" placeholder="新しい製品名">
+    <div class="modal-btn-row">
+      <button class="btn btn-primary" onclick="saveRename()">保存</button>
+      <button class="btn btn-outline" onclick="closeRenameModal()">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ==================== 初期データ ====================
 const BUILTIN_PRODUCTS = [
@@ -416,9 +440,19 @@ function getPrices() {
 function savePrices(arr) {
   localStorage.setItem('prices', JSON.stringify(arr));
 }
+function getNameOverrides() {
+  return JSON.parse(localStorage.getItem('name_overrides') || '{}');
+}
+function saveNameOverrides(obj) {
+  localStorage.setItem('name_overrides', JSON.stringify(obj));
+}
 
 function allProducts() {
-  return [...BUILTIN_PRODUCTS, ...getCustomProducts()];
+  const overrides = getNameOverrides();
+  const builtins = BUILTIN_PRODUCTS.map(p =>
+    overrides[p.id] ? { ...p, name: overrides[p.id] } : p
+  );
+  return [...builtins, ...getCustomProducts()];
 }
 
 function bestPriceForProduct(productId) {
@@ -492,7 +526,10 @@ function renderMain() {
       <td>${bestYen !== null ? bestYen + '円' : '<span class="no-data">-</span>'}</td>
       <td>${best !== null ? best.toFixed(2) + '円' : '<span class="no-data">-</span>'}</td>
       <td>${badge}</td>
-      <td>${isCustom ? `<button class="delete-btn" onclick="deleteCustomProduct('${p.id}')" title="削除">×</button>` : ''}</td>
+      <td style="white-space:nowrap;">
+        <button class="edit-btn" onclick="openRenameModal('${p.id}')" title="名前を変更">✎</button>
+        ${isCustom ? `<button class="delete-btn" onclick="deleteCustomProduct('${p.id}')" title="削除">×</button>` : ''}
+      </td>
     </tr>`;
   }).join('');
 }
@@ -711,6 +748,45 @@ function modalSelectProduct(productId) {
   const cb = modalCallback;
   closeModal();
   if (cb) cb(productId);
+}
+
+// ==================== 製品名変更モーダル ====================
+let renamingProductId = null;
+
+function openRenameModal(id) {
+  renamingProductId = id;
+  const product = productById(id);
+  document.getElementById('rename-input').value = product ? product.name : '';
+  document.getElementById('rename-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('rename-input').focus(), 50);
+}
+
+function closeRenameModal() {
+  document.getElementById('rename-overlay').classList.remove('open');
+  renamingProductId = null;
+}
+
+function handleRenameOverlayClick(e) {
+  if (e.target === document.getElementById('rename-overlay')) closeRenameModal();
+}
+
+function saveRename() {
+  const newName = document.getElementById('rename-input').value.trim();
+  if (!newName) { alert('製品名を入力してください'); return; }
+  const id = renamingProductId;
+  const isCustom = String(id).startsWith('c');
+  if (isCustom) {
+    const customs = getCustomProducts();
+    const p = customs.find(p => p.id == id);
+    if (p) p.name = newName;
+    saveCustomProducts(customs);
+  } else {
+    const overrides = getNameOverrides();
+    overrides[id] = newName;
+    saveNameOverrides(overrides);
+  }
+  closeRenameModal();
+  renderMain();
 }
 
 // ==================== 履歴の製品を変更 ====================
