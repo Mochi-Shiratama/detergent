@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アリエールジェル 価格チェッカー</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+    header {
+      background: #2b6cb0;
+      color: white;
+      padding: 14px 16px;
+      font-size: 17px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    header span.sub { font-size: 13px; font-weight: normal; opacity: 0.8; }
+    .screen { display: none; padding: 16px; max-width: 600px; margin: 0 auto; }
+    .screen.active { display: block; }
+
+    /* Buttons */
+    .btn {
+      display: inline-block;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .btn-primary { background: #2b6cb0; color: white; }
+    .btn-primary:active { background: #2c5282; }
+    .btn-success { background: #276749; color: white; }
+    .btn-success:active { background: #1c4532; }
+    .btn-outline {
+      background: white;
+      color: #2b6cb0;
+      border: 2px solid #2b6cb0;
+    }
+    .btn-outline:active { background: #ebf8ff; }
+    .btn-danger { background: #c53030; color: white; }
+    .btn-sm {
+      width: auto;
+      padding: 6px 14px;
+      font-size: 13px;
+      margin-top: 0;
+    }
+
+    /* Card */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .card-title {
+      font-size: 13px;
+      color: #718096;
+      margin-bottom: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th {
+      background: #ebf8ff;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 12px;
+      color: #2b6cb0;
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr.best-row td { background: #f0fff4; }
+    .star { color: #d69e2e; font-size: 16px; }
+    .no-data { color: #a0aec0; font-size: 13px; }
+
+    /* Form */
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: bold;
+      color: #4a5568;
+      margin-bottom: 6px;
+      margin-top: 14px;
+    }
+    label:first-of-type { margin-top: 0; }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: #2b6cb0; }
+
+    /* Product selector buttons */
+    .product-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .product-btn {
+      padding: 10px 8px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      text-align: left;
+      transition: all 0.15s;
+    }
+    .product-btn:active { background: #ebf8ff; }
+    .product-btn.selected {
+      border-color: #2b6cb0;
+      background: #ebf8ff;
+      color: #2b6cb0;
+    }
+    .product-btn .name { font-weight: bold; display: block; }
+    .product-btn .size { color: #718096; font-size: 12px; }
+    .product-btn.selected .size { color: #4299e1; }
+
+    /* Result box */
+    .result-box {
+      border-radius: 12px;
+      padding: 18px;
+      margin-top: 14px;
+      text-align: center;
+    }
+    .result-box.cheap { background: #f0fff4; border: 2px solid #68d391; }
+    .result-box.normal { background: #fffff0; border: 2px solid #f6e05e; }
+    .result-box.expensive { background: #fff5f5; border: 2px solid #fc8181; }
+    .result-box.unknown { background: #f7fafc; border: 2px solid #cbd5e0; }
+    .result-label {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+    .result-box.cheap .result-label { color: #276749; }
+    .result-box.normal .result-label { color: #744210; }
+    .result-box.expensive .result-label { color: #c53030; }
+    .result-box.unknown .result-label { color: #718096; }
+    .result-detail { font-size: 14px; color: #4a5568; }
+    .result-cpg { font-size: 20px; font-weight: bold; color: #2d3748; margin: 8px 0; }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .badge-green { background: #c6f6d5; color: #276749; }
+    .badge-yellow { background: #fefcbf; color: #744210; }
+    .badge-red { background: #fed7d7; color: #c53030; }
+    .badge-gray { background: #e2e8f0; color: #718096; }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: #a0aec0;
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .action-row .btn { margin-top: 0; }
+
+    .hint { font-size: 12px; color: #a0aec0; margin-top: 4px; }
+
+    /* History */
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #e2e8f0;
+      gap: 8px;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-info { flex: 1; min-width: 0; }
+    .history-date { font-size: 12px; color: #a0aec0; }
+    .history-store { font-size: 13px; color: #4a5568; }
+    .history-price { font-weight: bold; font-size: 15px; }
+    .history-cpg { font-size: 12px; color: #718096; }
+    .history-product-header {
+      font-size: 13px;
+      font-weight: bold;
+      color: #2b6cb0;
+      padding: 8px 0 4px;
+      border-bottom: 2px solid #ebf8ff;
+      margin-bottom: 4px;
+    }
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .filter-btn {
+      padding: 6px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 999px;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .filter-btn.active {
+      border-color: #2b6cb0;
+      background: #ebf8ff;
+      color: #2b6cb0;
+      font-weight: bold;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #fc8181;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 6px;
+      flex-shrink: 0;
+    }
+    .delete-btn:active { color: #c53030; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    アリエールジェル 価格チェッカー
+    <span class="sub">円/g 比較</span>
+  </div>
+</header>
+
+<!-- ==================== SCREEN 1: メイン ==================== -->
+<div id="screen-main" class="screen active">
+  <div class="card" style="margin-bottom:12px;">
+    <div class="action-row">
+      <button class="btn btn-primary" onclick="showScreen('screen-check')" style="margin-top:0;">価格を調べる</button>
+      <button class="btn btn-outline" onclick="showScreen('screen-add')" style="margin-top:0;">製品を追加する</button>
+    </div>
+    <button class="btn btn-outline" onclick="showScreen('screen-history')" style="margin-top:8px;">記録履歴を見る</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">製品一覧 · 円/g 比較</div>
+    <div class="table-wrap">
+      <table id="main-table">
+        <thead>
+          <tr>
+            <th>製品名</th>
+            <th>容量</th>
+            <th>最安値</th>
+            <th>円/g</th>
+            <th>評価</th>
+          </tr>
+        </thead>
+        <tbody id="main-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="hint" style="text-align:center;">※ 価格を記録するとランキングが更新されます</p>
+</div>
+
+<!-- ==================== SCREEN 2: 価格チェック ==================== -->
+<div id="screen-check" class="screen">
+  <div class="card">
+    <div class="card-title">製品を選択</div>
+    <div class="product-grid" id="product-grid"></div>
+  </div>
+
+  <div class="card">
+    <label for="input-price">価格（円）</label>
+    <input type="number" id="input-price" placeholder="例: 598" inputmode="numeric">
+
+    <label for="input-store">店舗名（任意）</label>
+    <input type="text" id="input-store" placeholder="例: イオン">
+
+    <button class="btn btn-primary" onclick="checkPrice()" style="margin-top:16px;">チェック</button>
+  </div>
+
+  <div id="check-result" style="display:none;">
+    <div id="result-box" class="result-box"></div>
+    <button class="btn btn-success" id="btn-record" onclick="recordPrice()">記録する</button>
+  </div>
+
+  <button class="btn btn-outline" onclick="showScreen('screen-main')" style="margin-top:10px;">戻る</button>
+</div>
+
+<!-- ==================== SCREEN 4: 履歴 ==================== -->
+<div id="screen-history" class="screen">
+  <div class="card">
+    <div class="card-title">絞り込み（製品）</div>
+    <div class="filter-row" id="history-filters"></div>
+  </div>
+
+  <div id="history-list"></div>
+
+  <button class="btn btn-outline" onclick="showScreen('screen-main')">戻る</button>
+</div>
+
+<!-- ==================== SCREEN 3: 製品追加 ==================== -->
+<div id="screen-add" class="screen">
+  <div class="card">
+    <div class="card-title">新しい製品を登録</div>
+
+    <label for="add-name">製品名</label>
+    <input type="text" id="add-name" placeholder="例: 詰め替え スーパーJumbo">
+
+    <label for="add-size">容量（g）</label>
+    <input type="number" id="add-size" placeholder="例: 2100" inputmode="numeric">
+
+    <button class="btn btn-success" onclick="addProduct()" style="margin-top:16px;">追加する</button>
+  </div>
+
+  <button class="btn btn-outline" onclick="showScreen('screen-main')">戻る</button>
+</div>
+
+<script>
+// ==================== 初期データ ====================
+const BUILTIN_PRODUCTS = [
+  { id: 1, name: '本体', size_g: 690 },
+  { id: 2, name: '詰め替え（小）', size_g: 520 },
+  { id: 3, name: '詰め替え 超特大', size_g: 815 },
+  { id: 4, name: '詰め替え 超ジャンボ', size_g: 1160 },
+  { id: 5, name: '詰め替え UJumbo', size_g: 1480 },
+];
+
+// ==================== データ操作 ====================
+function getCustomProducts() {
+  return JSON.parse(localStorage.getItem('custom_products') || '[]');
+}
+function saveCustomProducts(arr) {
+  localStorage.setItem('custom_products', JSON.stringify(arr));
+}
+function getPrices() {
+  return JSON.parse(localStorage.getItem('prices') || '[]');
+}
+function savePrices(arr) {
+  localStorage.setItem('prices', JSON.stringify(arr));
+}
+
+function allProducts() {
+  return [...BUILTIN_PRODUCTS, ...getCustomProducts()];
+}
+
+function bestPriceForProduct(productId) {
+  const prices = getPrices().filter(p => p.product_id == productId);
+  if (!prices.length) return null;
+  return Math.min(...prices.map(p => p.price_yen / productById(productId).size_g));
+}
+
+function productById(id) {
+  return allProducts().find(p => p.id == id);
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// ==================== 画面遷移 ====================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'screen-main') renderMain();
+  if (id === 'screen-check') renderCheckScreen();
+  if (id === 'screen-history') renderHistory();
+}
+
+// ==================== メイン画面 ====================
+function renderMain() {
+  const products = allProducts();
+  const tbody = document.getElementById('main-tbody');
+
+  // 全製品の最安 円/g を求めてベストを特定
+  const cpgList = products.map(p => {
+    const best = bestPriceForProduct(p.id);
+    return { id: p.id, cpg: best };
+  }).filter(x => x.cpg !== null);
+
+  const globalBest = cpgList.length ? Math.min(...cpgList.map(x => x.cpg)) : null;
+
+  if (!products.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="no-data" style="text-align:center;padding:24px;">製品がありません</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = products.map(p => {
+    const best = bestPriceForProduct(p.id);
+    const isBest = globalBest !== null && best !== null && Math.abs(best - globalBest) < 0.0001;
+
+    const bestYen = best !== null
+      ? getPrices()
+          .filter(pr => pr.product_id == p.id)
+          .reduce((min, pr) => pr.price_yen < min ? pr.price_yen : min, Infinity)
+      : null;
+
+    const badge = best !== null
+      ? (isBest
+          ? '<span class="badge badge-green">最安</span>'
+          : '')
+      : '<span class="badge badge-gray">未記録</span>';
+
+    return `<tr class="${isBest ? 'best-row' : ''}">
+      <td>${isBest ? '<span class="star">★</span> ' : ''}${p.name}</td>
+      <td>${p.size_g}g</td>
+      <td>${bestYen !== null ? bestYen + '円' : '<span class="no-data">-</span>'}</td>
+      <td>${best !== null ? best.toFixed(2) + '円' : '<span class="no-data">-</span>'}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ==================== 価格チェック画面 ====================
+let selectedProductId = null;
+let pendingCheckData = null;
+
+function renderCheckScreen() {
+  selectedProductId = null;
+  pendingCheckData = null;
+  document.getElementById('check-result').style.display = 'none';
+  document.getElementById('input-price').value = '';
+  document.getElementById('input-store').value = '';
+
+  const grid = document.getElementById('product-grid');
+  grid.innerHTML = allProducts().map(p =>
+    `<button class="product-btn" id="pbtn-${p.id}" onclick="selectProduct(${p.id})">
+      <span class="name">${p.name}</span>
+      <span class="size">${p.size_g}g</span>
+    </button>`
+  ).join('');
+}
+
+function selectProduct(id) {
+  selectedProductId = id;
+  document.querySelectorAll('.product-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('pbtn-' + id).classList.add('selected');
+  document.getElementById('check-result').style.display = 'none';
+  pendingCheckData = null;
+}
+
+function checkPrice() {
+  if (!selectedProductId) {
+    alert('製品を選択してください');
+    return;
+  }
+  const priceStr = document.getElementById('input-price').value.trim();
+  if (!priceStr || isNaN(priceStr) || Number(priceStr) <= 0) {
+    alert('価格を正しく入力してください');
+    return;
+  }
+  const price = Number(priceStr);
+  const store = document.getElementById('input-store').value.trim();
+  const product = productById(selectedProductId);
+  const cpg = price / product.size_g;
+  const bestCpg = bestPriceForProduct(selectedProductId);
+
+  // 全製品横断の最安 円/g
+  const allCpgs = allProducts().map(p => bestPriceForProduct(p.id)).filter(x => x !== null);
+  const globalBestCpg = allCpgs.length ? Math.min(...allCpgs) : null;
+
+  let cls, label, detail;
+
+  if (bestCpg === null) {
+    cls = 'unknown';
+    label = '初回記録';
+    detail = '過去データなし。記録して比較を始めましょう。';
+  } else {
+    const ratio = cpg / bestCpg;
+    if (ratio <= 1.05) {
+      cls = 'cheap'; label = '安い！';
+      detail = `過去最安 ${bestCpg.toFixed(2)}円/g より ${((1 - ratio) * 100).toFixed(1)}% お得`;
+    } else if (ratio <= 1.15) {
+      cls = 'normal'; label = '普通';
+      detail = `過去最安 ${bestCpg.toFixed(2)}円/g より ${((ratio - 1) * 100).toFixed(1)}% 高め`;
+    } else {
+      cls = 'expensive'; label = '高い';
+      detail = `過去最安 ${bestCpg.toFixed(2)}円/g より ${((ratio - 1) * 100).toFixed(1)}% 高い`;
+    }
+  }
+
+  let crossNote = '';
+  if (globalBestCpg !== null) {
+    const crossRatio = cpg / globalBestCpg;
+    if (crossRatio <= 1.05) {
+      crossNote = '<br><small>全製品中でも最安水準です</small>';
+    } else {
+      crossNote = `<br><small>全製品最安 ${globalBestCpg.toFixed(2)}円/g 比 ${((crossRatio - 1) * 100).toFixed(1)}% 高め</small>`;
+    }
+  }
+
+  const box = document.getElementById('result-box');
+  box.className = 'result-box ' + cls;
+  box.innerHTML = `
+    <div class="result-label">${label}</div>
+    <div class="result-cpg">${cpg.toFixed(2)} 円/g</div>
+    <div class="result-detail">${detail}${crossNote}</div>
+  `;
+
+  pendingCheckData = { product_id: selectedProductId, price_yen: price, store, cpg };
+  document.getElementById('check-result').style.display = 'block';
+  document.getElementById('btn-record').style.display = '';
+}
+
+function recordPrice() {
+  if (!pendingCheckData) return;
+  const prices = getPrices();
+  prices.push({
+    id: Date.now(),
+    product_id: pendingCheckData.product_id,
+    store: pendingCheckData.store,
+    price_yen: pendingCheckData.price_yen,
+    date: today()
+  });
+  savePrices(prices);
+  document.getElementById('btn-record').style.display = 'none';
+  document.getElementById('btn-record').textContent = '記録済み';
+
+  // 記録完了メッセージをresult-boxの下に追加
+  const saved = document.createElement('p');
+  saved.style.cssText = 'text-align:center;color:#276749;font-weight:bold;margin-top:8px;';
+  saved.textContent = '記録しました！';
+  const resultSection = document.getElementById('check-result');
+  if (!resultSection.querySelector('.saved-msg')) {
+    saved.className = 'saved-msg';
+    resultSection.appendChild(saved);
+  }
+}
+
+// ==================== 履歴画面 ====================
+let historyFilter = null; // null = 全製品
+
+function renderHistory() {
+  const prices = getPrices().slice().sort((a, b) => b.id - a.id); // 新しい順
+  const products = allProducts();
+
+  // フィルターボタン生成
+  const filtersEl = document.getElementById('history-filters');
+  const usedProductIds = [...new Set(prices.map(p => p.product_id))];
+  filtersEl.innerHTML =
+    `<button class="filter-btn ${historyFilter === null ? 'active' : ''}" onclick="setHistoryFilter(null)">すべて</button>` +
+    usedProductIds.map(pid => {
+      const p = productById(pid);
+      if (!p) return '';
+      return `<button class="filter-btn ${historyFilter == pid ? 'active' : ''}" onclick="setHistoryFilter('${pid}')">${p.name}</button>`;
+    }).join('');
+
+  const filtered = historyFilter === null ? prices : prices.filter(p => p.product_id == historyFilter);
+  const listEl = document.getElementById('history-list');
+
+  if (!filtered.length) {
+    listEl.innerHTML = `<div class="card"><div class="empty-state"><div class="icon">📋</div>記録がありません</div></div>`;
+    return;
+  }
+
+  // 製品ごとにグループ化して表示
+  const grouped = {};
+  filtered.forEach(pr => {
+    const key = pr.product_id;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(pr);
+  });
+
+  listEl.innerHTML = Object.entries(grouped).map(([pid, records]) => {
+    const product = productById(pid);
+    const productName = product ? `${product.name}（${product.size_g}g）` : `製品ID: ${pid}`;
+    const rows = records.map(pr => {
+      const cpg = product ? (pr.price_yen / product.size_g).toFixed(2) : '-';
+      return `<div class="history-item">
+        <div class="history-info">
+          <div class="history-price">${pr.price_yen}円 <span class="history-cpg">${cpg}円/g</span></div>
+          <div class="history-store">${pr.store || '店舗不明'}</div>
+          <div class="history-date">${pr.date}</div>
+        </div>
+        <button class="delete-btn" onclick="deleteRecord(${pr.id})" title="削除">×</button>
+      </div>`;
+    }).join('');
+
+    return `<div class="card">
+      <div class="history-product-header">${productName}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+function setHistoryFilter(pid) {
+  historyFilter = pid;
+  renderHistory();
+}
+
+function deleteRecord(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  savePrices(getPrices().filter(p => p.id !== id));
+  renderHistory();
+}
+
+// ==================== 製品追加 ====================
+function addProduct() {
+  const name = document.getElementById('add-name').value.trim();
+  const sizeStr = document.getElementById('add-size').value.trim();
+
+  if (!name) { alert('製品名を入力してください'); return; }
+  if (!sizeStr || isNaN(sizeStr) || Number(sizeStr) <= 0) { alert('容量（g）を正しく入力してください'); return; }
+
+  const customs = getCustomProducts();
+  const newId = 'c' + Date.now();
+  customs.push({ id: newId, name, size_g: Number(sizeStr) });
+  saveCustomProducts(customs);
+
+  document.getElementById('add-name').value = '';
+  document.getElementById('add-size').value = '';
+
+  showScreen('screen-main');
+}
+
+// ==================== 初期化 ====================
+renderMain();
+</script>
+</body>
+</html>
