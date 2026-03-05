@@ -248,6 +248,45 @@
       flex-shrink: 0;
     }
     .delete-btn:active { color: #c53030; }
+    .edit-btn {
+      background: none;
+      border: none;
+      color: #4299e1;
+      font-size: 15px;
+      cursor: pointer;
+      padding: 4px 6px;
+      flex-shrink: 0;
+    }
+    .edit-btn:active { color: #2b6cb0; }
+    .history-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      width: 100%;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-title {
+      font-size: 15px;
+      font-weight: bold;
+      color: #2d3748;
+      margin-bottom: 14px;
+    }
   </style>
 </head>
 <body>
@@ -280,6 +319,7 @@
             <th>最安値</th>
             <th>円/g</th>
             <th>評価</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="main-tbody"></tbody>
@@ -342,6 +382,15 @@
   </div>
 
   <button class="btn btn-outline" onclick="showScreen('screen-main')">戻る</button>
+</div>
+
+<!-- ==================== MODAL: 製品選択 ==================== -->
+<div id="modal-overlay" class="modal-overlay" onclick="handleModalOverlayClick(event)">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">製品を選択してください</div>
+    <div class="product-grid" id="modal-product-grid"></div>
+    <button class="btn btn-outline" onclick="closeModal()" style="margin-top:14px;">キャンセル</button>
+  </div>
 </div>
 
 <script>
@@ -429,12 +478,14 @@ function renderMain() {
           : '')
       : '<span class="badge badge-gray">未記録</span>';
 
+    const isCustom = String(p.id).startsWith('c');
     return `<tr class="${isBest ? 'best-row' : ''}">
       <td>${isBest ? '<span class="star">★</span> ' : ''}${p.name}</td>
       <td>${p.size_g}g</td>
       <td>${bestYen !== null ? bestYen + '円' : '<span class="no-data">-</span>'}</td>
       <td>${best !== null ? best.toFixed(2) + '円' : '<span class="no-data">-</span>'}</td>
       <td>${badge}</td>
+      <td>${isCustom ? `<button class="delete-btn" onclick="deleteCustomProduct('${p.id}')" title="削除">×</button>` : ''}</td>
     </tr>`;
   }).join('');
 }
@@ -600,7 +651,10 @@ function renderHistory() {
           <div class="history-store">${pr.store || '店舗不明'}</div>
           <div class="history-date">${pr.date}</div>
         </div>
-        <button class="delete-btn" onclick="deleteRecord(${pr.id})" title="削除">×</button>
+        <div class="history-actions">
+          <button class="edit-btn" onclick="openEditRecordModal(${pr.id})" title="製品を変更">✎</button>
+          <button class="delete-btn" onclick="deleteRecord(${pr.id})" title="削除">×</button>
+        </div>
       </div>`;
     }).join('');
 
@@ -620,6 +674,59 @@ function deleteRecord(id) {
   if (!confirm('この記録を削除しますか？')) return;
   savePrices(getPrices().filter(p => p.id !== id));
   renderHistory();
+}
+
+// ==================== モーダル ====================
+let modalCallback = null;
+
+function openModal(title, onSelect) {
+  modalCallback = onSelect;
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-product-grid').innerHTML = allProducts().map(p =>
+    `<button class="product-btn" onclick="modalSelectProduct('${p.id}')">
+      <span class="name">${p.name}</span>
+      <span class="size">${p.size_g}g</span>
+    </button>`
+  ).join('');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  modalCallback = null;
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function modalSelectProduct(productId) {
+  closeModal();
+  if (modalCallback) modalCallback(productId);
+}
+
+// ==================== 履歴の製品を変更 ====================
+function openEditRecordModal(recordId) {
+  openModal('正しい製品を選んでください', (newProductId) => {
+    const prices = getPrices();
+    const rec = prices.find(p => p.id === recordId);
+    if (rec) rec.product_id = newProductId;
+    savePrices(prices);
+    renderHistory();
+  });
+}
+
+// ==================== カスタム製品の削除 ====================
+function deleteCustomProduct(id) {
+  const product = productById(id);
+  const linked = getPrices().filter(p => p.product_id == id).length;
+  const msg = linked > 0
+    ? `「${product.name}」を削除しますか？\nこの製品の価格記録（${linked}件）も一緒に削除されます。`
+    : `「${product.name}」を削除しますか？`;
+  if (!confirm(msg)) return;
+  saveCustomProducts(getCustomProducts().filter(p => p.id !== id));
+  if (linked > 0) savePrices(getPrices().filter(p => p.product_id != id));
+  renderMain();
 }
 
 // ==================== 製品追加 ====================
