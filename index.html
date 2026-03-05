@@ -446,7 +446,14 @@ function showScreen(id) {
 
 // ==================== メイン画面 ====================
 function renderMain() {
-  const products = allProducts();
+  const products = allProducts().slice().sort((a, b) => {
+    const ca = bestPriceForProduct(a.id);
+    const cb = bestPriceForProduct(b.id);
+    if (ca === null && cb === null) return 0;
+    if (ca === null) return 1;
+    if (cb === null) return -1;
+    return ca - cb;
+  });
   const tbody = document.getElementById('main-tbody');
 
   // 全製品の最安 円/g を求めてベストを特定
@@ -701,8 +708,9 @@ function handleModalOverlayClick(e) {
 }
 
 function modalSelectProduct(productId) {
+  const cb = modalCallback;
   closeModal();
-  if (modalCallback) modalCallback(productId);
+  if (cb) cb(productId);
 }
 
 // ==================== 履歴の製品を変更 ====================
