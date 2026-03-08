@@ -710,7 +710,7 @@ function checkPrice() {
     document.getElementById('result-box').insertAdjacentElement('afterend', div);
   }
 
-  pendingCheckData = { product_id: selectedProductId, price_yen: price, store, cpg };
+  pendingCheckData = { product_id: selectedProductId, price_yen: rawPrice, store, cpg };
   document.getElementById('check-result').style.display = 'block';
   document.getElementById('btn-record').style.display = '';
 }
